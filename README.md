@@ -6,7 +6,7 @@
 
 
 
-> **当前状态 /**：私聊出站已经过验证；私聊入站仍为实验性功能，默认关闭；群聊和原生 `@` 暂不支持。
+> **当前状态 /**：私聊出站已经过验证；面板提供可开关的私聊入站 Beta，默认关闭；Beta 目前仅验证已登记且已校准私聊的纯文本 Copy 实验链路，不包含自动多会话扫描。群聊和原生 `@` 暂不支持。
 >
 
 ## 测试与反馈
@@ -45,7 +45,7 @@
 | OneBot V11 正向 WS / Forward WebSocket | 已实现 / Implemented | 支持配置热加载；第三方兼容性待测试 / Hot reload is implemented; third-party compatibility is untested. |
 | `get_friend_list` | 已验证 / Verified | 返回已批准的本地联系人映射 / Returns approved local mappings. |
 | `send_private_msg` | 已验证 / Verified | 可通过确定性微信 UI 发送文本 / Sends text through the deterministic WeChat UI flow. |
-| 私聊文本入站 / Private text inbound | 实验性、默认关闭 / Experimental, disabled | 等待会话身份和正文复制链路进一步验证 / Pending stronger identity and copy verification. |
+| 私聊文本入站 Beta / Private text inbound Beta | 可面板开关，默认关闭 / Panel-gated, disabled by default | 已验证已登记私聊的纯文本 Copy → 隔离 OneBot 事件；自动多会话扫描和生产自动轮询仍未开放 / Verified for registered, calibrated private text Copy → isolated OneBot events; automatic multi-chat scanning and production polling are not enabled. |
 | 群聊入站 / Group inbound | 暂不支持 / Not supported | 不会伪装成私聊事件 / Never emulated as private events. |
 | 原生群聊 `@` / Native group mentions | 暂不支持 / Not supported | 不会把普通文字冒充原生提及 / Literal text is not claimed as a native mention. |
 | 文件、图片、语音、贴纸、回复 / Media, files, voice, stickers, replies | 暂不支持 / Not supported | 当前范围为文本 / Current scope is text only. |
@@ -146,15 +146,14 @@ runtime/gateway/protocol.json
 
 ## 私聊入站实验功能 
 
-私聊入站当前默认关闭。未来只有同时满足以下条件才会发布消息：
+私聊入站 Beta 默认关闭，可在管理面板的“私聊入站 Beta”区域启用或关闭。当前 Beta 仅针对**已登记且已校准的私聊纯文本气泡**：系统必须确认 Copy 菜单、复制原文并通过去重后，才会构造隔离实验事件。该开关不启用自动多会话扫描、生产 Gateway 自动轮询、群聊、`@`、文件、图片、语音或链接/文章卡片。
 
+开启 Beta 前，请确认：
 
-1. 已批准的私聊会话视觉身份；
-2. 两帧稳定的会话列表快照；
-3. 没有置顶或折叠会话；
-4. 已验证选中行和聊天标题；
-5. 聊天区没有被附属窗口遮挡；
-6. 成功复制一条完整的左侧入站文本气泡；
+1. 会话未置顶、未折叠；
+2. 私聊联系人已登记；
+3. 当前客户端版本、窗口大小和消息气泡位置已完成校准；
+4. 仅测试普通纯文本消息。
 
 使用实验入站功能时，请不要置顶会话，也不要折叠群聊/会话。遇到未知、重复标题、遮挡、群聊或 `@` 情况，系统会隔离而不是错误发布 OneBot 事件。
 
@@ -182,8 +181,8 @@ python3 -m unittest discover -s panel/tests -v
 
 ```text
 Gateway: 21 tests passed
-UI Worker: 60 tests passed
-Panel: 14 tests passed
+UI Worker: 85 tests passed
+Panel: 17 tests passed
 ```
 
 ## 开源协议 / License

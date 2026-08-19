@@ -4,7 +4,7 @@
 
 A Docker-first **OneBot V11 WeChat gateway** for Chinese users: runs the official WeChat Linux client inside a private X11 virtual desktop, and lets you configure forward/reverse WebSocket through a management panel.
 
-> **Current status**: private-message outbound is verified; private-message inbound is still experimental and disabled by default; group chats and native `@` mentions are not yet supported.
+> **Current status**: private-message outbound is verified; the panel provides a toggleable private inbound Beta, disabled by default. The Beta is verified only for registered and calibrated private-text Copy experiments; it does not include automatic multi-chat scanning. Group chats and native `@` mentions are not supported.
 
 ## Testing & Feedback
 
@@ -42,7 +42,7 @@ Please do **not** send in the group: QR codes, access tokens, WeChat profiles, c
 | OneBot V11 forward WebSocket | Implemented | Hot reload is supported; third-party compatibility is untested. |
 | `get_friend_list` | Verified | Returns approved local contact mappings. |
 | `send_private_msg` | Verified | Sends text through the deterministic WeChat UI flow. |
-| Private text inbound | Experimental, disabled | Pending stronger identity and copy verification. |
+| Private text inbound Beta | Panel-gated, disabled by default | Verified for registered, calibrated private-text Copy → isolated OneBot events. Automatic multi-chat scanning and production polling are not enabled. |
 | Group inbound | Not supported | Never emulated as private events. |
 | Native group mentions `@` | Not supported | Literal text is not claimed as a native mention. |
 | Media, files, voice, stickers, replies | Not supported | Current scope is text only. |
@@ -133,16 +133,16 @@ Call `get_status` to view the current explicit capability boundaries:
 
 ## Experimental Private Inbound
 
-Private inbound is currently disabled by default. In the future, a message will only be emitted when all of the following conditions are met:
+Private inbound Beta is disabled by default and can be enabled or disabled in the **Private Inbound Beta** area of the management panel. It is currently limited to **registered, calibrated private-text bubbles**: the system must confirm a Copy menu, copy the original text, and pass deduplication before it creates an isolated experimental event. The switch does not enable automatic multi-chat scanning, production Gateway polling, group chats, `@` mentions, files, images, voice, or link/article cards.
 
-1. Approved private-chat session visual identity;
-2. Two stable frames of the session list snapshot;
-3. No pinned or folded sessions;
-4. Verified selected row and chat title;
-5. The chat area is not obscured by an auxiliary window;
-6. A complete left-side inbound text bubble is successfully copied.
+Before enabling the Beta, make sure that:
 
-When using the experimental inbound feature, please do not pin sessions, and do not fold group chats/sessions. When unknown, duplicate-title, obscured, group-chat or `@` situations are encountered, the system will isolate them instead of incorrectly emitting OneBot events.
+1. the conversation is not pinned or folded;
+2. the private contact is registered;
+3. the client version, window size, and message-bubble position have been calibrated;
+4. only ordinary plain-text messages are being tested.
+
+When using the experimental inbound feature, do not pin sessions or fold group chats/sessions. Unknown, duplicate-title, obscured, group-chat, or `@` cases are quarantined instead of emitted as incorrect OneBot events.
 
 ## Privacy & Security
 
@@ -164,8 +164,8 @@ Current public-version test results:
 
 ```text
 Gateway: 21 tests passed
-UI Worker: 60 tests passed
-Panel: 14 tests passed
+UI Worker: 85 tests passed
+Panel: 17 tests passed
 ```
 
 ## License
