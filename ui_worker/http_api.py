@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from panel.config_api import private_inbound_beta_enabled
+from ui_worker.private_beta import private_inbound_beta_enabled
 
 from ui_worker.private_endpoint import experimental_private_event
 
