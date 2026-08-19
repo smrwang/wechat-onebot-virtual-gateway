@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from ui_worker.inbound_policy import inbound_publishing_enabled
 from ui_worker.private_beta import private_inbound_beta_enabled
 from ui_worker.inbound import InboundDeduper, message_fingerprint
 from ui_worker.ocr_reader import read_active_conversation
+from ui_worker.scan_lock import scan_once_or_empty
 from ui_worker.wechat_x11_driver import WeChatX11Driver
 from ui_worker.linux_runner import LinuxWeChatRunner
 
@@ -27,6 +29,7 @@ VISUAL_REGISTRY_PATH = Path(os.environ.get("VISUAL_PRIVATE_REGISTRY_PATH", "/roo
 ACTIVE_BETA_CURSOR_PATH = Path(os.environ.get("ACTIVE_BETA_CURSOR_PATH", "/root/.xwechat/adapter/active-private-cursor.json"))
 DRIVER = WeChatX11Driver(LinuxWeChatRunner())
 ACTIVE_BETA_SCANNER = ActivePrivateBetaScanner(ACTIVE_BETA_CURSOR_PATH, DRIVER)
+SCAN_LOCK = threading.Lock()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -34,7 +37,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/v1/poll-inbound":
             self.send_error(404)
             return
-        try:
+        def scan_messages() -> list[dict[str, str]]:
             messages = poll_active_private_beta(
                 private_inbound_beta_enabled(BETA_PATH),
                 json.loads(VISUAL_REGISTRY_PATH.read_text()) if VISUAL_REGISTRY_PATH.exists() else {},
@@ -47,6 +50,10 @@ class Handler(BaseHTTPRequestHandler):
                     key = message_fingerprint(active_id, text)
                     if DEDUPER.accept(key):
                         messages.append({"event_id": key, "conversation_id": active_id, "sender_name": "active", "text": text})
+            return messages
+
+        try:
+            messages = scan_once_or_empty(SCAN_LOCK, scan_messages)
         except Exception as exc:
             raw = json.dumps({"messages": [], "error": "worker poll failed", "detail": type(exc).__name__}).encode()
             self.send_response(500)
