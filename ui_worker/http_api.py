@@ -1,12 +1,18 @@
 """Internal UI-worker HTTP contract."""
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
+
+from panel.config_api import private_inbound_beta_enabled
 
 from ui_worker.private_endpoint import experimental_private_event
 
 
-def handle_experimental_private_request(payload: dict[str, Any], runner: Any) -> tuple[int, dict[str, Any]]:
+def handle_experimental_private_request(payload: dict[str, Any], runner: Any, beta_path: Path) -> tuple[int, dict[str, Any]]:
+    if not private_inbound_beta_enabled(beta_path):
+        return 403, {"error": "private inbound beta is disabled"}
     required = ("user_id", "x", "y", "bubble_key")
     if any(key not in payload for key in required):
         return 400, {"error": "missing private evidence fields"}

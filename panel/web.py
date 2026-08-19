@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, urlparse
 
 from panel.inbound_status import private_inbound_status
 from panel.logs import sanitize_log_line
-from panel.config_api import apply_contact_mapping, apply_protocol_config
+from panel.config_api import apply_contact_mapping, apply_private_inbound_beta, apply_protocol_config, private_inbound_beta_enabled
 from panel.qr_state import login_state_from_x11
 from ui_worker.contact_map import ContactMapStore
 
@@ -20,6 +20,7 @@ PORT = int(os.environ.get("PANEL_PORT", "9120"))
 TOKEN = os.environ.get("PANEL_TOKEN", "")
 RUNTIME = Path(os.environ.get("PANEL_RUNTIME", "runtime/panel"))
 GATEWAY_RUNTIME = Path(os.environ.get("GATEWAY_RUNTIME", "runtime/gateway"))
+PRIVATE_BETA_PATH = Path(os.environ.get("PRIVATE_BETA_PATH", "runtime/wechat-profile/adapter/private-inbound-beta.json"))
 
 
 def authorized(token: str | None) -> bool:
@@ -103,15 +104,18 @@ class Handler(BaseHTTPRequestHandler):
             protocol_json = html.escape(json.dumps(config["protocol"], ensure_ascii=False, indent=2))
             contacts_json = html.escape(json.dumps(config["contacts"], ensure_ascii=False, indent=2))
             qr = f"<img src='{qr_image_path()}' alt='WeChat login QR'>" if image else "<p>已登录，二维码不再显示。</p>"
+            inbound = private_inbound_status(PRIVATE_BETA_PATH)
+            beta_label = "已开启（Beta）" if inbound["beta_enabled"] else "已关闭（默认）"
+            beta_action = "关闭 Beta 私聊入站" if inbound["beta_enabled"] else "开启 Beta 私聊入站"
             body = f"""<!doctype html><meta charset='utf-8'><title>WeChat Adapter Panel</title>
 <style>body{{font-family:system-ui;background:#f5f7f9;color:#17212b;margin:0}}main{{max-width:820px;margin:32px auto;background:#fff;padding:28px;border:1px solid #d0d7de}}img{{max-width:292px;width:100%;display:block;margin:18px auto}}code,pre{{background:#eef2f6;padding:8px;white-space:pre-wrap}}section{{border-top:1px solid #d8dee4;margin-top:22px;padding-top:18px}}input,textarea{{box-sizing:border-box;width:100%;padding:9px;margin:4px 0 12px}}button{{background:#07c160;color:#fff;border:0;padding:9px 14px;border-radius:5px}}small{{color:#57606a}}</style>
 <main><h1>WeChat Adapter</h1><p>微信状态：<code>{status}</code></p>{qr}
 <section><h2>联系人映射</h2><p><small>配置一次后，其他 OneBot 客户端使用对应 user_id 即可自动搜索并发送。</small></p><label>OneBot user_id</label><input id='user_id'><label>微信搜索键（昵称、备注或 wxid）</label><input id='search_key'><button onclick='saveContact()'>保存联系人映射</button><pre>{contacts_json}</pre></section>
-<section><h2>私聊入站</h2><p><small>实验性功能，当前暂停校准。启用后只处理已登记私聊文本；请勿置顶或折叠会话。群聊和 @ 提及暂不支持。</small></p></section>
+<section><h2>私聊入站 Beta</h2><p>状态：<code>{beta_label}</code></p><p><small>仅允许已登记私聊的纯文本实验 Copy 路径；群聊、@、文件、图片、文章卡片和自动多会话扫描均不在 Beta 范围内。请勿置顶或折叠会话。</small></p><button onclick='setPrivateBeta({str(not inbound["beta_enabled"]).lower()})'>{beta_action}</button></section>
 <section><h2>OneBot 协议</h2><p><small>反向 WS 与正向 WS；保存协议后重载网关生效。</small></p><textarea id='protocol' rows='12'>{protocol_json}</textarea><button onclick='saveProtocol()'>保存协议配置</button></section>
 <section><h2>运行日志</h2><p><small>只显示服务状态和错误；访问令牌、聊天正文和登录资料已过滤。</small></p><button onclick='loadLogs()'>刷新日志</button><pre id='logs'>加载中…</pre></section>
 <pre id='result'></pre></main>
-<script>const base=location.pathname.endsWith('/')?location.pathname:location.pathname+'/';async function post(path,data){{let r=await fetch(base+path,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});document.getElementById('result').textContent=await r.text();if(r.ok)setTimeout(()=>location.reload(),500)}}async function loadLogs(){{let r=await fetch(base+'api/v1/logs');let data=await r.json();document.getElementById('logs').textContent=(data.lines||[]).join('\\n')||'暂无运行日志';}}function saveContact(){{post('api/v1/contacts',{{user_id:user_id.value,search_key:search_key.value}})}}function saveProtocol(){{try{{post('api/v1/protocol',JSON.parse(protocol.value))}}catch(e){{result.textContent=e}}}}loadLogs();</script></main>""".encode()
+<script>const base=location.pathname.endsWith('/')?location.pathname:location.pathname+'/';async function post(path,data){{let r=await fetch(base+path,{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify(data)}});document.getElementById('result').textContent=await r.text();if(r.ok)setTimeout(()=>location.reload(),500)}}async function loadLogs(){{let r=await fetch(base+'api/v1/logs');let data=await r.json();document.getElementById('logs').textContent=(data.lines||[]).join('\\n')||'暂无运行日志';}}function saveContact(){{post('api/v1/contacts',{{user_id:user_id.value,search_key:search_key.value}})}}function saveProtocol(){{try{{post('api/v1/protocol',JSON.parse(protocol.value))}}catch(e){{result.textContent=e}}}}function setPrivateBeta(enabled){{post('api/v1/private-inbound-beta',{{enabled:enabled}})}}loadLogs();</script></main>""".encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
         elif relative_path == "/api/v1/logs":
@@ -119,7 +123,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
         elif relative_path == "/api/v1/state":
-            body = json.dumps({**state, **management_config(), "inbound": private_inbound_status()}).encode()
+            body = json.dumps({**state, **management_config(), "inbound": private_inbound_status(PRIVATE_BETA_PATH)}).encode()
+        elif relative_path == "/api/v1/private-inbound-beta":
+            body = json.dumps(private_inbound_status(PRIVATE_BETA_PATH)).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
         else:
@@ -142,6 +148,9 @@ class Handler(BaseHTTPRequestHandler):
             if relative_path == "/api/v1/contacts":
                 apply_contact_mapping(Path("runtime/wechat-profile/adapter/contacts.json"), payload)
                 body = json.dumps({"ok": True, "restart_required": False}).encode()
+            elif relative_path == "/api/v1/private-inbound-beta":
+                enabled = apply_private_inbound_beta(PRIVATE_BETA_PATH, payload)
+                body = json.dumps({"ok": True, "beta_enabled": enabled, "restart_required": False}).encode()
             elif relative_path == "/api/v1/protocol":
                 config = apply_protocol_config(GATEWAY_RUNTIME / "protocol.json", payload)
                 body = json.dumps({"ok": True, "protocol": config.__dict__, "restart_required": True}, default=lambda o: o.__dict__).encode()

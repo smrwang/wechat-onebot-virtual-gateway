@@ -19,6 +19,7 @@ from ui_worker.linux_runner import LinuxWeChatRunner
 PORT = int(os.environ.get("UI_WORKER_PORT", "9121"))
 CONTACTS = ContactMapStore(Path(os.environ.get("CONTACT_MAP_PATH", "/root/.xwechat/adapter/contacts.json")))
 DEDUPER = InboundDeduper(Path(os.environ.get("INBOUND_DB_PATH", "/root/.xwechat/adapter/inbound.sqlite3")))
+BETA_PATH = Path(os.environ.get("PRIVATE_BETA_PATH", "/root/.xwechat/adapter/private-inbound-beta.json"))
 DRIVER = WeChatX11Driver(LinuxWeChatRunner())
 
 
@@ -49,7 +50,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             payload = json.loads(self.rfile.read(size))
             if self.path == "/v1/experimental-private":
-                status, body = handle_experimental_private_request(payload, DRIVER)
+                status, body = handle_experimental_private_request(payload, DRIVER, BETA_PATH)
             else:
                 status, body = handle_send_request(payload, DRIVER, CONTACTS)
         except json.JSONDecodeError:
