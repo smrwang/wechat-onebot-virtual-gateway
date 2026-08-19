@@ -19,15 +19,17 @@ class ActiveBubbleRunner(Protocol):
 
 
 class ActivePrivateBetaScanner:
-    def __init__(self, cursor_path: Path, runner: ActiveBubbleRunner) -> None:
+    def __init__(self, cursor_path: Path, runner: ActiveBubbleRunner, scanner_version: str = "psm11-scale3-v1") -> None:
         self.selector = PrivateBubbleSelector(cursor_path)
         self.runner = runner
+        self.scanner_version = scanner_version
 
     def scan(self, user_id: str) -> list[dict[str, str]]:
         bubbles = self.runner.read_active_bubbles()
         keys = [key for key, _ in bubbles]
-        if not self.selector.has_baseline(user_id):
+        if not self.selector.has_baseline(user_id) or self.selector.scanner_version(user_id) != self.scanner_version:
             self.selector.baseline(user_id, keys)
+            self.selector.set_scanner_version(user_id, self.scanner_version)
             return []
         points = dict(bubbles)
         events: list[dict[str, str]] = []

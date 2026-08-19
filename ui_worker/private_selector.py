@@ -15,6 +15,14 @@ class PrivateBubbleSelector:
         state = self.cursor._conversation(conversation_id)
         return bool(state.get("initialized")) or bool(state.get("baseline", []))
 
+    def scanner_version(self, conversation_id: str) -> str:
+        return str(self.cursor._conversation(conversation_id).get("scanner_version", ""))
+
+    def set_scanner_version(self, conversation_id: str, version: str) -> None:
+        state = self.cursor._conversation(conversation_id)
+        state["scanner_version"] = version
+        self.cursor._save()
+
     def baseline(self, conversation_id: str, bubble_keys: list[str]) -> list[str]:
         self.cursor.baseline(conversation_id, bubble_keys)
         return []

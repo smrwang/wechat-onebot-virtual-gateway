@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import sqlite3
 import time
 from contextlib import asynccontextmanager
@@ -22,6 +23,8 @@ from gateway.capabilities import onebot_capabilities
 from gateway.contacts_api import friend_list
 from gateway.forward_ws import ForwardWebSocketRuntime
 from gateway.ui_worker_client import UiWorkerClient
+
+LOGGER = logging.getLogger(__name__)
 
 
 class GatewayService:
@@ -147,6 +150,8 @@ class GatewayService:
                 }
             )
             published += int(accepted)
+        if published:
+            LOGGER.info("UI worker poll published=%d", published)
         return published
 
     @staticmethod

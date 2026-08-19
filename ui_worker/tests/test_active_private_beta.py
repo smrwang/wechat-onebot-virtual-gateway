@@ -50,6 +50,16 @@ class ActivePrivateBetaScannerTests(unittest.TestCase):
             events = ActivePrivateBetaScanner(path, second).scan("195")
         self.assertEqual(events[0]["text"], "hello")
 
+    def test_changed_scanner_version_rebaselines_without_replaying_visible_bubbles(self):
+        runner = MagicMock()
+        runner.read_active_bubbles.return_value = [("a", (500, 200)), ("b", (510, 230))]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "cursor.json"
+            ActivePrivateBetaScanner(path, runner, scanner_version="v1").scan("195")
+            events = ActivePrivateBetaScanner(path, runner, scanner_version="v2").scan("195")
+        self.assertEqual(events, [])
+        runner.copy_private_bubble.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
