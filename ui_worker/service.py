@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ui_worker.auto_map import register_active_contact
 from ui_worker.contact_map import ContactMapStore
-from ui_worker.http_api import handle_send_request
+from ui_worker.http_api import handle_experimental_private_request, handle_send_request
 from ui_worker.inbound_policy import inbound_publishing_enabled
 from ui_worker.inbound import InboundDeduper, message_fingerprint
 from ui_worker.ocr_reader import read_active_conversation
@@ -42,13 +42,16 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(raw)
 
     def do_POST(self) -> None:  # noqa: N802
-        if self.path != "/v1/send-private":
+        if self.path not in {"/v1/send-private", "/v1/experimental-private"}:
             self.send_error(404)
             return
         size = int(self.headers.get("Content-Length", "0"))
         try:
             payload = json.loads(self.rfile.read(size))
-            status, body = handle_send_request(payload, DRIVER, CONTACTS)
+            if self.path == "/v1/experimental-private":
+                status, body = handle_experimental_private_request(payload, DRIVER)
+            else:
+                status, body = handle_send_request(payload, DRIVER, CONTACTS)
         except json.JSONDecodeError:
             status, body = 400, {"error": "invalid JSON"}
         raw = json.dumps(body).encode()

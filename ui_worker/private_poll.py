@@ -12,6 +12,7 @@ def build_private_event(user_id: str, text: str, bubble_key: str) -> dict[str, s
     return {
         "event_id": event_id,
         "conversation_id": str(user_id),
+        "sender_id": str(user_id),
         "sender_name": "private",
         "text": normalized,
     }

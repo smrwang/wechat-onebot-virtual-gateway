@@ -15,6 +15,7 @@ class X11Runner(Protocol):
     def capture_ocr(self) -> str: ...
     def click_search_result(self, search_key: str) -> None: ...
     def paste_and_send(self, text: str) -> None: ...
+    def copy_bubble_text(self, point: tuple[int, int], menu_origin: tuple[int, int]) -> str | None: ...
 
 
 @dataclass
@@ -35,6 +36,9 @@ class WeChatX11Driver:
         self.runner.paste_and_send(text)
         self._sequence += 1
         return f"wechat-outbound-{self._sequence}"
+
+    def copy_private_bubble(self, point: tuple[int, int]) -> str | None:
+        return self.runner.copy_bubble_text(point, menu_origin=(500, 480))
 
     def poll_text(self):
         raise NotImplementedError("OCR inbound polling is the next driver slice")
