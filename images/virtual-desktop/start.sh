@@ -5,6 +5,8 @@ export DISPLAY="${DISPLAY:-:99}"
 export XDG_RUNTIME_DIR=/tmp/runtime-wechat
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
+mkdir -p /root/.xwechat/adapter
+test -f /root/.xwechat/adapter/contacts.json || printf '{}\n' > /root/.xwechat/adapter/contacts.json
 
 Xvfb "$DISPLAY" -screen 0 1280x800x24 -nolisten tcp &
 XVFB_PID=$!

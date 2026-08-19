@@ -35,21 +35,18 @@ services:
       GATEWAY_DATABASE: /data/gateway.sqlite3
       GATEWAY_HOST: 0.0.0.0
       GATEWAY_PORT: 16700
-      UI_WORKER_URL: http://virtual-desktop:9126
-      CONTACTS_PATH: /data/contacts.json
+      UI_WORKER_URL: http://virtual-desktop:9121
+      CONTACTS_PATH: /data/adapter/contacts.json
     ports:
       - "127.0.0.1:16700:16700"
     volumes:
       - ./runtime/gateway:/data
-      - ./runtime/wechat-profile/adapter/contacts.json:/data/contacts.json:ro
+      - ./runtime/wechat-profile/adapter:/data/adapter:ro
     networks:
       - default
       - internal
     restart: "no"
 
 networks:
-  default:
-    external: true
-    name: wechat-virtual-gateway_default
   internal:
     internal: true

@@ -70,6 +70,8 @@ runtime/installers/WeChatLinux_x86_64.deb
 docker compose up -d --build
 ```
 
+首次启动会自动创建 Compose 网络、`runtime/gateway/` 和持久化 profile 下的空联系人映射文件。**不需要**预先创建 `wechat-virtual-gateway_default` Docker 网络，也不需要修改 Docker daemon、UFW、host 网络模式或开放 noVNC/Worker/OneBot 端口来完成基础部署。
+
 ### 3. 打开管理面板
 
 管理面板是正常使用所需的唯一界面：

@@ -65,6 +65,8 @@ The installer is not committed to the repository for copyright and security reas
 docker compose up -d --build
 ```
 
+The first startup automatically creates the Compose network, `runtime/gateway/`, and an empty contact-mapping file beneath the persistent profile. You do **not** need to pre-create a `wechat-virtual-gateway_default` Docker network, modify the Docker daemon/UFW, use host networking, or expose noVNC/Worker/OneBot ports for basic deployment.
+
 ### 3. Open the management panel
 
 The management panel is the only interface you need for normal use:
