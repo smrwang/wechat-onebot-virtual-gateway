@@ -27,6 +27,7 @@ class PrivateCursor:
     def baseline(self, conversation_id: str, visible_messages: list[str]) -> int:
         state = self._conversation(conversation_id)
         state["baseline"] = list(visible_messages)
+        state["initialized"] = True
         self._save()
         return len(visible_messages)
 
@@ -57,3 +58,7 @@ class PrivateCursor:
         state["seen"] = list(seen)
         self._save()
         return True
+
+    def seen(self, conversation_id: str, text: str, bubble_key: str) -> bool:
+        key = hashlib.blake2b(f"{conversation_id}\0{bubble_key}\0{text}".encode(), digest_size=16).hexdigest()
+        return key in set(self._conversation(conversation_id).get("seen", []))

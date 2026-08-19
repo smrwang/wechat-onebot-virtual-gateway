@@ -16,6 +16,7 @@ class X11Runner(Protocol):
     def click_search_result(self, search_key: str) -> None: ...
     def paste_and_send(self, text: str) -> None: ...
     def copy_bubble_text(self, point: tuple[int, int], menu_origin: tuple[int, int]) -> str | None: ...
+    def read_active_bubbles(self) -> list[tuple[str, tuple[int, int]]]: ...
 
 
 @dataclass
@@ -36,6 +37,9 @@ class WeChatX11Driver:
         self.runner.paste_and_send(text)
         self._sequence += 1
         return f"wechat-outbound-{self._sequence}"
+
+    def read_active_bubbles(self) -> list[tuple[str, tuple[int, int]]]:
+        return self.runner.read_active_bubbles()
 
     def copy_private_bubble(self, point: tuple[int, int]) -> str | None:
         return self.runner.copy_bubble_text(point, menu_origin=(500, 480))

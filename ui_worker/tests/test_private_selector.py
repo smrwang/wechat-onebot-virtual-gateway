@@ -11,6 +11,12 @@ class PrivateBubbleSelectorTests(unittest.TestCase):
             selector = PrivateBubbleSelector(Path(directory) / "cursor.json")
             self.assertEqual(selector.baseline("195", ["a", "b"]), [])
 
+    def test_empty_baseline_is_still_persisted(self):
+        with tempfile.TemporaryDirectory() as directory:
+            selector = PrivateBubbleSelector(Path(directory) / "cursor.json")
+            selector.baseline("195", [])
+            self.assertTrue(selector.has_baseline("195"))
+
     def test_returns_only_unseen_new_bubbles(self):
         with tempfile.TemporaryDirectory() as directory:
             selector = PrivateBubbleSelector(Path(directory) / "cursor.json")

@@ -5,6 +5,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from ui_worker.active_bubbles import parse_active_bubbles
 from ui_worker.copy_menu import copy_action_point_from_tsv
 
 
@@ -50,6 +51,15 @@ class LinuxWeChatRunner:
         self._run(f"printf '%s' '{encoded}' | xclip -selection clipboard; DISPLAY={self.display} xdotool mousemove {self.x + 301} {self.y + 645} click 1; xdotool key ctrl+v")
         time.sleep(0.3)
         self._run(f"DISPLAY={self.display} xdotool mousemove {self.x + 951} {self.y + 706} click 1")
+
+    def read_active_bubbles(self) -> list[tuple[str, tuple[int, int]]]:
+        xwd = self.workdir / "active-bubbles.xwd"
+        png = self.workdir / "active-bubbles.png"
+        threshold = self.workdir / "active-bubbles-threshold.png"
+        self._run(f"DISPLAY={self.display} xwd -root -silent > {xwd}")
+        subprocess.run(["convert", str(xwd), "-crop", "700x530+430+100", "-resize", "300%", "-colorspace", "Gray", "-contrast-stretch", "1%x1%", str(png)], check=True)
+        result = subprocess.run(["tesseract", str(png), "stdout", "-l", "chi_sim+eng", "--psm", "11", "tsv"], capture_output=True, text=True, check=True)
+        return [(bubble.key, bubble.point) for bubble in parse_active_bubbles(result.stdout, crop_origin=(430, 100), split_x=350, scale=3)]
 
     def copy_bubble_text(self, point: tuple[int, int], menu_origin: tuple[int, int]) -> str | None:
         x, y = point
