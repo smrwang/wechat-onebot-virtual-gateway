@@ -139,7 +139,10 @@ class GatewayService:
         if self._worker_client is None:
             return 0
         published = 0
-        for message in self._worker_client.poll_inbound():
+        messages = self._worker_client.poll_inbound()
+        if messages:
+            print(f"UI worker poll received={len(messages)}", flush=True)
+        for message in messages:
             accepted = await self.accept_ui_event(
                 {
                     "event_id": str(message.get("event_id", "")),

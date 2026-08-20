@@ -54,6 +54,8 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             messages = scan_once_or_empty(SCAN_LOCK, scan_messages)
+            if messages:
+                print(f"UI worker beta emitted={len(messages)}", flush=True)
         except Exception as exc:
             raw = json.dumps({"messages": [], "error": "worker poll failed", "detail": type(exc).__name__}).encode()
             self.send_response(500)
